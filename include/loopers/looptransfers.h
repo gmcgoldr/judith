@@ -1,5 +1,5 @@
-#ifndef LOOPTRANSFERS
-#define LOOPTRANSFERS
+#ifndef LOOPTRANSFERS_H
+#define LOOPTRANSFERS_H
 
 #include <vector>
 
@@ -46,5 +46,5 @@ public:
 
 }
 
-#endif  // LOOPTRANFERS
+#endif  // LOOPTRANFERS_H
 

@@ -1,5 +1,5 @@
-#ifndef LOOPALIGNCORR
-#define LOOPALIGNCORR
+#ifndef LOOPALIGNCORR_H
+#define LOOPALIGNCORR_H
 
 #include <vector>
 
@@ -38,5 +38,5 @@ public:
 
 }
 
-#endif  // LOOPALIGNCORR
+#endif  // LOOPALIGNCORR_H
 

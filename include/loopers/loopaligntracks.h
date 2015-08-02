@@ -1,5 +1,5 @@
-#ifndef LOOPALIGNTRACKS
-#define LOOPALIGNTRACKS
+#ifndef LOOPALIGNTRACKS_H
+#define LOOPALIGNTRACKS_H
 
 #include <vector>
 #include <list>
@@ -74,5 +74,5 @@ public:
 
 }
 
-#endif  // LOOPALIGNTRACKS
+#endif  // LOOPALIGNTRACKS_H
 
