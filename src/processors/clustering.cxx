@@ -4,6 +4,9 @@
 #include <list>
 #include <stack>
 #include <cmath>
+#include <climits>
+#include <algorithm>
+#include <cassert>
 
 #include "storage/hit.h"
 #include "storage/cluster.h"
@@ -51,6 +54,7 @@ void Clustering::buildCluster(
     Storage::Cluster& cluster,
     std::list<Storage::Hit*>& clustered) {
   const size_t nhits = clustered.size();
+  assert(nhits >= 1 && "Building empty cluster");
   cluster.reserveHits(nhits);
 
   // Variables for weighted incremental variance computation
@@ -58,8 +62,15 @@ void Clustering::buildCluster(
   double sumw = 0;
   double meanX = 0;
   double meanY = 0;
-  double m2X = 0;
+  double m2X = 0;  // sum squared of differences to mean
   double m2Y = 0;
+
+  // Keep track of cluster range to know if using 1/sqrt(12). Don't rely on
+  // m2's since they are subject to be close to 0 if small weights occur.
+  int minX = INT_MAX;
+  int maxX = INT_MIN;
+  int minY = INT_MAX;
+  int maxY = INT_MIN;
 
   for (std::list<Storage::Hit*>::iterator it = clustered.begin();
       it != clustered.end(); ++it) {
@@ -71,11 +82,16 @@ void Clustering::buildCluster(
     const double weight = m_weighted ? hit.getValue() : 1;
     const double tmp = weight + sumw;
 
+    minX = std::min(hit.getPixX(), minX);
+    maxX = std::max(hit.getPixX(), maxX);
+    minY = std::min(hit.getPixY(), minY);
+    maxY = std::max(hit.getPixY(), maxY);
+
     // Single pass mean and variance computation
     const double deltaX = hit.getPixX() - meanX;
     const double rX = deltaX * weight / tmp;
     meanX += rX;
-    m2X += sumw * deltaX * rX;
+    m2X += sumw * deltaX * rX;  // incremental formulation
 
     // Again in y
     const double deltaY = hit.getPixY() - meanY;
@@ -89,14 +105,17 @@ void Clustering::buildCluster(
   // Set the cluster mean
   cluster.setPix(meanX, meanY);
 
-  if (nhits == 1)
-    // For a single hit cluster, use the RMS of a flat distribution
-    cluster.setPixErr(1./std::sqrt(12), 1./std::sqrt(12));
-  else if (nhits > 1)
-    // Otherwise, use the sample RMS
-    cluster.setPixErr(
-        std::sqrt(m2X/sumw * nhits/(double)(nhits-1)),
-        std::sqrt(m2Y/sumw * nhits/(double)(nhits-1)));
+  const double errX = 
+      (maxX - minX < 1) ?  // check if hits span more than 1 pixel
+      1./std::sqrt(12) :  // they don't, so use RMS of uniform distribution
+      std::sqrt(m2X/sumw * nhits / (double)(nhits-1));  // use RMS
+
+  const double errY = 
+      (maxY - minY < 1) ?
+      1./std::sqrt(12) :
+      std::sqrt(m2Y/sumw * nhits / (double)(nhits-1));
+
+  cluster.setPixErr(errX, errY);
 }
 
 void Clustering::processEvent(Storage::Event& event) {

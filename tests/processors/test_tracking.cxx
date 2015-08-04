@@ -17,6 +17,7 @@ bool approxEqual(double v1, double v2, double tol=1E-10) {
 void newCluster(Storage::Event& event, size_t iplane, double posx, double posy=0) {
   event.newCluster(iplane);
   event.getPlane(iplane).getClusters().back()->setPos(posx, posy, iplane);
+  event.getPlane(iplane).getClusters().back()->setPosErr(1, 1, 1);
 }
 
 int test_association() {
