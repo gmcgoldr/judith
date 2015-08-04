@@ -72,18 +72,6 @@ double Device::tsToTime(ULong64_t timeStamp) const {
   return (timeStamp-m_timeStart) / (double)m_clockRate;
 }
 
-void Device::pixelToSpace(
-    double col,
-    double row,
-    unsigned nsensor,
-    double& x,
-    double& y,
-    double& z) const {
-  // pixelToSpace of the sensor will automatically call this device's transform
-  // to go to global coodrinates, so just call that method.
-  m_sensors[nsensor]->pixelToSpace(col, row, x, y, z);
-}
-
 void Device::maskSensor(size_t n, bool mask) {
   m_sensorMask[n] = mask;
   // Not the fastest way to do this, but this is far from speed critical

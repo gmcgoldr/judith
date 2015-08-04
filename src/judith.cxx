@@ -235,6 +235,9 @@ int main(int argc, const char** argv) {
         &trackBranchesOff,
         &eventInfoBranchesOff);
 
+    // Build an alignment object from the device
+    Processors::Aligning aligning(devices[0]);
+
     // Build a clustering object from the options
     Processors::Clustering clustering;
     if (options.hasArg("process-clusters-nrows"))
@@ -242,21 +245,45 @@ int main(int argc, const char** argv) {
     if (options.hasArg("process-clusters-ncols"))
       clustering.m_maxRows = strToInt(options.getValue("process-clusters-ncols"));
 
-    // Build an alignment object from the device
-    Processors::Aligning aligning(devices[0]);
+    // Build a tracking object from the options
+    Processors::Tracking tracking(devices[0].getNumSensors());
+    if (options.hasArg("process-tracks-radius"))
+      tracking.m_radius = strToFloat(
+          options.getValue("process-tracks-radius"));
+    if (options.hasArg("process-tracks-minclusters"))
+      tracking.m_minClusters = strToInt(
+          options.getValue("process-tracks-minclusters"));
+    // If transfers were requested, then do a pre-run to get transfer scales
+    if (options.evalBoolArg("process-tracks-transfers")) {
+      // Setup the pre-looper to measure transfers for only the reference
+      Loopers::LoopTransfers preLooper(input, devices[0]);
+      preLooper.addProcessor(clustering);
+      preLooper.addProcessor(aligning);
+      configureLooper(options, preLooper);
+      // Run it
+      preLooper.loop();
+      preLooper.finalize();
+      // Set tracking transfer scales based on residual distributions
+      preLooper.apply(tracking);
+    }
 
     // Prepare a processing looper to loop the input and write to the output
     Loopers::LoopProcess looper(input, output);
 
-    // Give it the aligning object to compute and store global positions
-    looper.addProcessor(aligning);
+    // Note the order here: first processor clusters hits, next performs 
+    // alignment (computes global values for the clusters), and then tracking
+    // can be performed (using clusters' global values)
 
     // If a clustering is requested, give it a clustering processor
     if (options.evalBoolArg("process-clusters"))
       looper.addProcessor(clustering);
+
+    // Give it the aligning object to compute and store global positions
+    looper.addProcessor(aligning);
+
     // Likewise for tracking
     if (options.evalBoolArg("process-tracks"))
-      {}//looper.m_tracking = &tracking;
+      looper.addProcessor(tracking);
 
     // Apply generic looping options to the looper
     configureLooper(options, looper);
@@ -365,11 +392,16 @@ int main(int argc, const char** argv) {
     Processors::Aligning aligning(devices.getVector());
     looper.addProcessor(aligning);
 
+    // Note that the looper has its own tracking processor, since it has to
+    // know how to handle the reference / dut devices differently
+
     // Configure the alignment's tracking processor
     if (options.hasArg("process-tracks-radius"))
       looper.m_tracking.m_radius = strToFloat(
           options.getValue("process-tracks-radius"));
-
+    if (options.hasArg("process-tracks-minclusters"))
+      looper.m_tracking.m_minClusters = strToInt(
+          options.getValue("process-tracks-minclusters"));
     // If transfers were requested, then do a pre-run to get transfer scales
     if (options.evalBoolArg("process-tracks-transfers")) {
       // Setup the pre-looper to measure transfers for only the reference
@@ -383,6 +415,24 @@ int main(int argc, const char** argv) {
       // Set tracking transfer scales based on residual distributions
       preLooper.apply(looper.m_tracking);
     }
+
+    // Parse track alignment specific options
+    if (options.hasArg("align-tracks-translation-scale"))
+      looper.m_translationScale = strToFloat(
+          options.getValue("align-tracks-translation-scale"));
+    if (options.hasArg("align-tracks-translation-limit"))
+      looper.m_translationLimit = strToFloat(
+          options.getValue("align-tracks-translation-limit"));
+    if (options.hasArg("align-tracks-rotation-scale"))
+      looper.m_rotationScale = strToFloat(
+          options.getValue("align-tracks-rotation-scale"));
+    if (options.hasArg("align-tracks-rotation-limit"))
+      looper.m_rotationLimit = strToFloat(
+          options.getValue("align-tracks-rotation-limit"));
+    if (options.hasArg("align-tracks-tolerance"))
+      looper.m_tolerance = strToFloat(
+          options.getValue("align-tracks-tolerance"));
+    looper.m_inPlane = options.evalBoolArg("align-tracks-inplane");
 
     // Apply generic looping options to the looper
     configureLooper(options, looper);

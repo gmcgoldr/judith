@@ -5,10 +5,7 @@
 
 namespace Mechanics {
 
-Alignment::Alignment() :
-    // By default, the alignment applies offsets and rotations
-    m_disableOff(false),
-    m_disableRot(false) {
+Alignment::Alignment() {
   // Initialize the alignment values to 0
   for (unsigned i = 0; i < 6; i++)
     m_alignment[i] = 0;
@@ -36,70 +33,62 @@ void Alignment::calculate() {
   m_matrix[2][2] = cos(rx) * cos(ry);
 }
 
-void Alignment::transform(double& x, double& y, double& z, bool inverse) const {
-  // The transform is implemented in the overloaded version which takes an
-  // an array, so set the values in an array
-  double values[3] = { x, y, z };
-  transform(values, inverse);
-  // Read the array back into the provided variables
-  x = values[0];
-  y = values[1];
-  z = values[2];
-}
-
-void Alignment::transform(double* values, bool inverse) const {
-  // No transformation requested
-  if (m_disableRot && m_disableOff) return;
-
-  // Buffer for applying the rotation matrix (needs to keep the original values
-  // while updating the new values)
+void Alignment::rotate(double& x, double& y, double& z) const {
+  double values[3] = {x, y, z};
   double buffer[3] = { 0 };
 
-  // Perform only translations
-  if (m_disableRot) {
-    for (unsigned i = 0; i < 3; i++)
-      // Subtract or add the offset depending on inverse or not
-      values[i] += (inverse ? -1 : +1) * m_alignment[OFFX+i];
-  }
+  // Compute the rotation into the buffer
+  for (unsigned i = 0; i < 3; i++)
+    for (unsigned j = 0; j < 3; j++)
+      buffer[i] += values[j] * m_matrix[i][j];
 
-  // Perform only rotations
-  else if (m_disableOff) {
-    // Compute the rotation into the buffer
+  x = buffer[0];
+  y = buffer[1];
+  z = buffer[2];
+}
+
+void Alignment::unrotate(double& x, double& y, double& z) const {
+  double values[3] = {x, y, z};
+  double buffer[3] = { 0 };
+
+  for (unsigned i = 0; i < 3; i++)
+    for (unsigned j = 0; j < 3; j++)
+      // Inverse rotation matrix is just its transpose
+      buffer[i] += values[j] * m_matrix[j][i];
+
+  x = buffer[0];
+  y = buffer[1];
+  z = buffer[2];
+}
+
+void Alignment::transform(double& x, double& y, double& z) const {
+  double values[3] = {x, y, z};
+  double buffer[3] = { 0 };
+
     for (unsigned i = 0; i < 3; i++)
       for (unsigned j = 0; j < 3; j++)
-        // The inverse rotation is just the same operation with the transpose
-        buffer[i] += values[j] * (inverse ? m_matrix[j][i] : m_matrix[i][j]);
-    // Mover buffer back into original values
-    for (unsigned i = 0; i < 3; i++)
-      values[i] = buffer[i];
-  }
+        buffer[i] += values[j] * m_matrix[i][j];
 
-  // Perform both rotation and translation
-  else {
-    // For the non-inverse transformation: translate then rotate
-    if (!inverse) {
-      // Compute the rotation into the buffer
-      for (unsigned i = 0; i < 3; i++)
-        for (unsigned j = 0; j < 3; j++)
-          buffer[i] += values[j] * m_matrix[i][j];
-      // Apply the translation and move back into values
-      for (unsigned i = 0; i < 3; i++)
-        values[i] = buffer[i] + m_alignment[OFFX+i];
-    }
+  x = buffer[0] + m_alignment[OFFX];
+  y = buffer[1] + m_alignment[OFFY];
+  z = buffer[2] + m_alignment[OFFZ];
+}
 
-    // For the inverse transformation: un-rotate then un-translate
-    else {
-      // Buffer the untranslated points, and set values to 0
-      for (unsigned i = 0; i < 3; i++) {
-        buffer[i] = values[i] - m_alignment[OFFX+i];
-        values[i] = 0;
-      }
-      // Update the values with the un-rotation of the buffer
-      for (unsigned i = 0; i < 3; i++)
-        for (unsigned j = 0; j < 3; j++)
-          values[i] += buffer[j] * m_matrix[j][i];
-    }
-  }
+void Alignment::untransform(double& x, double& y, double& z) const {
+  double values[3] = {
+      x - m_alignment[OFFX], 
+      y - m_alignment[OFFY], 
+      z - m_alignment[OFFZ]
+  };
+  double buffer[3] = { 0 };
+
+  for (unsigned i = 0; i < 3; i++)
+    for (unsigned j = 0; j < 3; j++)
+      buffer[i] += values[j] * m_matrix[j][i];
+
+  x = buffer[0];
+  y = buffer[1];
+  z = buffer[2];
 }
 
 // NOTE: all these methods need to call the `calculate` method to update the

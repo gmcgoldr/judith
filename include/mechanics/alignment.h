@@ -24,11 +24,6 @@ public:
   };
 
 private:
-  /** Do not apply offsets when transforming */
-  bool m_disableOff;
-  /** Do not apply rotations when transforming */
-  bool m_disableRot;
-  
   /** Calculate the rotation matrix */
   void calculate();
 
@@ -42,13 +37,10 @@ public:
   Alignment();
   virtual ~Alignment() {}
 
-  /** Transform the given x, y, z values. If `inverse` is false, transform
-    * from the local coodrinate system to the global one. Otherwise do the
-    * opposite */
-  void transform(double& x, double& y, double& z, bool inverse=false) const;
-  /** Transform the values given in the `values` array. Index 0 is the x value,
-    * index 1 is the y value and index 2 is the z value. */
-  void transform(double* values, bool inverse=false) const;
+  void transform(double& x, double& y, double& z) const;
+  void untransform(double& x, double& y, double& z) const;
+  void rotate(double& x, double& y, double& z) const;
+  void unrotate(double& x, double& y, double& z) const;
 
   /** Set the alignment from an array of 6 values whose indices are specified
     * by the `AlignAxis` enum */
@@ -63,12 +55,6 @@ public:
   void setRotX(double value);
   void setRotY(double value);
   void setRotZ(double value);
-
-  /** Toggle the use of offsets when transforming. if the given value is `true`
-    * then offsets are used, otherwise they are not */
-  inline void toggleOffset(bool value=true) { m_disableOff = !value; }
-  /** Toggle the use of rotations when transforming. */
-  inline void toggleRotation(bool value=true) { m_disableRot = !value; }
 
   /** Get an alignment value */
   inline double getAlignment(AlignAxis axis) const { return m_alignment[axis]; }

@@ -31,8 +31,8 @@ void Aligning::processEvent(
       Storage::Hit& hit = **it;
       // Ask the device to apply first local, then global transformation to
       // the hit's pixel coordinates
-      device.pixelToSpace(
-          hit.getPixX(), hit.getPixY(), iplane, x, y, z);
+      device[iplane].pixelToSpace(
+          hit.getPixX(), hit.getPixY(), x, y, z);
       hit.setPos(x, y, z);
     }
 
@@ -40,20 +40,15 @@ void Aligning::processEvent(
     const std::vector<Storage::Cluster*>& clusters = plane.getClusters();
     for (std::vector<Storage::Cluster*>::const_iterator it = clusters.begin();
         it != clusters.end(); ++it) {
-      double x, y, z;
       Storage::Cluster& cluster = **it;
-      device.pixelToSpace(
-          cluster.getPixX(), cluster.getPixY(), iplane, x, y, z);
+      double x, y, z;
+      device[iplane].pixelToSpace(
+          cluster.getPixX(), cluster.getPixY(), x, y, z);
       cluster.setPos(x, y, z);
-      // TODO: rotation and scale calculation only
-      // Compute also the positions shifted by 1 sigma
       double ex, ey, ez;
-      device.pixelToSpace(
-          cluster.getPixX()+cluster.getPixErrX(),
-          cluster.getPixY()+cluster.getPixErrY(),
-          iplane, ex, ey, ez);
-      // And then store the difference to their nominal values
-      cluster.setPosErr(std::fabs(ex-x), std::fabs(ey-y), std::fabs(ez-z));
+      device[iplane].pixelErrToSpace(
+          cluster.getPixErrX(), cluster.getPixErrY(), ex, ey, ez);
+      cluster.setPosErr(ex, ey, ez);
     }
   }
 }

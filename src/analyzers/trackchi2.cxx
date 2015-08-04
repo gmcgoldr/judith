@@ -36,7 +36,9 @@ void TrackChi2::process() {
   for (size_t itrack = 0; itrack < refEvent.getNumTracks(); itrack++) {
     const Storage::Track& track = refEvent.getTrack(itrack);
 
-    m_tracks.push_back(Track(m_numRefPlanes, m_numDUTPlanes));
+    // Setup a new track, spanning clusters starting at icluster (size of the
+    // cluster list)
+    m_tracks.push_back(Track(m_icluster));
 
     // Make alignment cluster objects from track clusters and link to the track
     for (size_t icluster = 0; icluster < track.getNumClusters(); icluster++) {
@@ -46,15 +48,14 @@ void TrackChi2::process() {
       const size_t iplane = cluster.fetchPlane()->getPlaneNum();
 
       m_clusters.push_back(Cluster(
-          m_devices[0]->getSensorConst(iplane),
+          m_devices[0]->getSensorConst(iplane),  // constituents are in ref
           cluster.getPixX(),
           cluster.getPixY(),
           cluster.getPixErrX(),
           cluster.getPixErrY()));
       m_icluster += 1;
 
-      // Associate this alignment cluster to its alignment track
-      m_tracks.back().constituents.push_back(m_icluster-1);
+      m_tracks.back().m_nclusters += 1;  // track will incorporate this cluster
     }
 
     // Move onto the DUT to look for matches, if one is given
@@ -86,6 +87,7 @@ void TrackChi2::process() {
         }
       }
 
+      // Add it to the list of clusters
       m_clusters.push_back(Cluster(
           m_devices[1]->getSensorConst(iplane),
           best->getPixX(),
@@ -93,7 +95,8 @@ void TrackChi2::process() {
           best->getPixErrX(),
           best->getPixErrY()));
       m_icluster += 1;
-      m_tracks.back().matches.push_back(m_icluster-1);
+
+      m_tracks.back().m_nmatches += 1;  // track will incorporate this match
     }
   }
 }

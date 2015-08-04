@@ -61,6 +61,14 @@ public:
       double& y,
       double& z) const;
 
+  /** Compute the size of the pixel errors in global coordinates */
+  void pixelErrToSpace(
+      double colErr,
+      double rowErr,
+      double& xe,
+      double& ye,
+      double& ze) const;
+
   /** Transform a global coordinate to a pixel coordinate. Projects along the
     * z-axis, after applying the rotation. */
   void spaceToPixel(

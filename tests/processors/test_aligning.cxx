@@ -58,8 +58,8 @@ int test_aligning() {
 
   double x0, y0, z0, x1, y1, z1;
 
-  device.pixelToSpace(1, 1, 0, x0, y0, z0);
-  device.pixelToSpace(2, 2, 1, x1, y1, z1);
+  device[0].pixelToSpace(1, 1, x0, y0, z0);
+  device[1].pixelToSpace(2, 2, x1, y1, z1);
 
   const Storage::Cluster& cluster0 = event.getCluster(0);
   const Storage::Cluster& cluster1 = event.getCluster(1);
@@ -86,14 +86,14 @@ int test_aligning() {
 
   // Transform the point 1 sigma away, and then get distance from transformed 
   // central value
-  device.pixelToSpace(1+cluster0.getPixErrX(), 1+cluster0.getPixErrY(), 0, x1, y1, z1);
+  device[0].pixelToSpace(1+cluster0.getPixErrX(), 1+cluster0.getPixErrY(), x1, y1, z1);
   x1 = std::fabs(x1-x0);
   y1 = std::fabs(y1-y0);
   z1 = std::fabs(z1-z0);
 
-  if (cluster0.getPosErrX() != x1 ||
-      cluster0.getPosErrY() != y1 ||
-      cluster0.getPosErrZ() != z1) {
+  if (!approxEqual(cluster0.getPosErrX(), x1) ||
+      !approxEqual(cluster0.getPosErrY(), y1) ||
+      !approxEqual(cluster0.getPosErrZ(), z1)) {
     std::cerr << "Clusters error not correctly aligned" << std::endl;
     return -1;
   }

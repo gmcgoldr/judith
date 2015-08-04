@@ -6,6 +6,7 @@
 
 #include <TDirectory.h>
 #include <TH1D.h>
+#include <TH2D.h>
 
 #include "analyzers/analyzer.h"
 

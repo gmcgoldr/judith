@@ -1,5 +1,5 @@
-#ifndef ANA_TRACKCHI2
-#define ANA_TRACKCHI2
+#ifndef ANA_TRACKCHI2_H
+#define ANA_TRACKCHI2_H
 
 #include <string>
 #include <vector>
@@ -13,24 +13,27 @@ namespace Mechanics { class Sensor; }
 namespace Analyzers {
 
 /**
+  * Store all clusters and group them into tracks for a given looper run.
+  * The clusters and tracks are light-weight objects containing the minimum
+  * information needed to compute the track chi^2 under new alignment.
+  *
+  * Provides a list of clusters and tracks, intended to be used in a minmizer
+  * routine for alignment.
   *
   * @author Garrin McGoldrick (garrin.mcgoldrick@cern.ch)
   */
 class TrackChi2 : public Analyzer {
 public:
-  // For fast chi^2, don't want to loop over full Track and Cluster objects,
-  // instead define these light weight versions which can be stored in
-  // continuous memory
-
   /** Cluster information required for chi^2 alignment */
   struct Cluster {
     /** Pointer to the sensor which aligns this cluster */
     const Mechanics::Sensor* sensor;
     /** Cluster location in local pixel coordinates */
-    double pixX;
-    double pixY;
-    double pixErrX;
-    double pixErrY;
+    const double pixX;
+    const double pixY;
+    const double pixErrX;
+    const double pixErrY;
+    /** Initialization of members on construction */
     Cluster(
         const Mechanics::Sensor& sensor, 
         double pixX,
@@ -44,21 +47,16 @@ public:
         pixErrY(pixErrY) {}
   };
 
-  /** Track information required for chi^2 alignment */
+  /** Track information, given as a range of indices of clusters used by this
+    * track, from the list of all clusters */
   struct Track {
-    // Note: don't use pointers since the clusters can be move dinto continous
-    // memory. Isntead, keep their index which should remain consistent.
-    /** Index to constituent clusters in cluster list */
-    std::vector<size_t> constituents;
-    /** Index to matching clusters in cluster list */
-    std::vector<size_t> matches;
-    Track(size_t nRefPlanes, size_t nDUTPlanes) :
-        constituents(),
-        matches() {
-      // Don't want memeory allocation at each cluster addition
-      constituents.reserve(nRefPlanes);
-      matches.reserve(nDUTPlanes);
-    }
+    /** Position in list of clusters where this track starts */
+    size_t m_istart;
+    /** Number of clusters to read for the track clusters */
+    size_t m_nclusters;
+    /** Number of matched clusters following the constituents */
+    size_t m_nmatches;
+    Track(size_t istart) : m_istart(istart), m_nclusters(0), m_nmatches(0) {}
   };
 
 private:
@@ -100,11 +98,13 @@ public:
     Analyzer::setOutput(dir, name);
   }
 
+  /** Get the list of all procssed tracks */
   const std::list<Track>& getTracks() const { return m_tracks; }
+  /** Get the list of all processed clusters */
   const std::list<Cluster>& getClusters() const { return m_clusters; }
 };
 
 }
 
-#endif  // ANA_TRACKCHI2 
+#endif  // ANA_TRACKCHI2_H
 

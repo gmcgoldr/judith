@@ -63,6 +63,23 @@ void Sensor::pixelToSpace(
   if (m_device) m_device->transform(x, y, z);
 }
 
+void Sensor::pixelErrToSpace(
+    double colErr,
+    double rowErr,
+    double& xe,
+    double& ye,
+    double& ze) const {
+  xe = colErr * m_colPitch;
+  ye = rowErr * m_rowPitch;
+  ze = 0;
+  rotate(xe, ye, ze);
+  if (m_device) m_device->rotate(xe, ye, ze);
+  // Could be rotated into negative values, keep asbolute value
+  xe = std::fabs(xe);
+  ye = std::fabs(ye);
+  ze = std::fabs(ze);
+}
+
 void Sensor::spaceToPixel(
     double x,
     double y,
@@ -70,9 +87,9 @@ void Sensor::spaceToPixel(
     double& col,
     double& row) const {
   // Remove the device transformations if appicable
-  if (m_device) m_device->transform(x, y, z, true);
+  if (m_device) m_device->untransform(x, y, z);
   // Remove sensor transformations relative to the device
-  transform(x, y, z, true);
+  untransform(x, y, z);
   // Now get the corresponding pixel unit coordinate
   col = x/m_colPitch + m_ncols/2. - 0.5;
   row = y/m_rowPitch + m_nrows/2. - 0.5;

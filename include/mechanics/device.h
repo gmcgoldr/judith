@@ -59,15 +59,6 @@ public:
   /** Convert a clock tick to a time after the first read out */
   double tsToTime(ULong64_t timeStamp) const;
 
-  /** Convert the pixel location of a sensor to global coodriates */
-  void pixelToSpace(
-      double col,
-      double row,
-      unsigned nsensor,
-      double& x,
-      double& y,
-      double& z) const;
-
   /** Mask the sensor at index `n`, from the list of all sensors */
   void maskSensor(size_t n, bool mask=true);
   /** Get the mask applied to the full list of sensors */

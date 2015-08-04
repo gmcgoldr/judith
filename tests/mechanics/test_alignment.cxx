@@ -91,9 +91,9 @@ int test_transform() {
   const double ox = 1.1;
   const double oy = -2.2;
   const double oz = 3.3;
-  const double x0 = -0.4;
-  const double y0 = 0.5;
-  const double z0 = 0.6;
+  double x0 = -0.4;
+  double y0 = 0.5;
+  double z0 = 0.6;
 
   double matrix[3][3] = { 0 };
   matrix[0][0] = cos(ry) * cos(rz);
@@ -120,29 +120,28 @@ int test_transform() {
     matrix[2][0]*x0 + matrix[2][1]*y0 + matrix[2][2]*z0 + oz,
   };
 
-  double values[3] = { x0, y0, z0 };
-  align.transform(values);
+  align.transform(x0, y0, z0);
 
-  for (int i = 0; i < 3; i++) {
-    if (!approxEqual(values[i], expected[i])) {
-      std::cerr << "Transformation failed" << std::endl;
-      return -1;
-    }
+  if (!approxEqual(x0, expected[0]) ||
+      !approxEqual(y0, expected[1]) ||
+      !approxEqual(z0, expected[2])) {
+    std::cerr << "Transformation failed" << std::endl;
+    return -1;
   }
 
   return 0;
 }
 
-int test_partialTransform() {
+int test_rotate() {
   const double rx = 0.1;
   const double ry = 0.2;
   const double rz = 0.3;
   const double ox = 1.1;
   const double oy = 2.2;
   const double oz = 3.3;
-  const double x0 = 0.4;
-  const double y0 = 0.5;
-  const double z0 = 0.6;
+  double x0 = 0.4;
+  double y0 = 0.5;
+  double z0 = 0.6;
 
   double matrix[3][3] = { 0 };
   matrix[0][0] = cos(ry) * cos(rz);
@@ -164,66 +163,23 @@ int test_partialTransform() {
   align.setRotZ(rz);
 
   double expected[3] = { 0 };
-  double values[3] = { 0 };
-
-  align.toggleRotation(false);
-  align.toggleOffset(false);
-
-  expected[0] = x0;
-  expected[1] = y0;
-  expected[2] = z0;
-  values[0] = x0;
-  values[1] = y0;
-  values[2] = z0;
-  align.transform(values);
-
-  for (int i = 0; i < 3; i++) {
-    if (!approxEqual(values[i], expected[i])) {
-      std::cerr << "Transformation failed with no rotation or offset" << std::endl;
-      return -1;
-    }
-  }
-
-  align.toggleRotation(true);
-  align.toggleOffset(false);
-
   expected[0] = matrix[0][0]*x0 + matrix[0][1]*y0 + matrix[0][2]*z0;
   expected[1] = matrix[1][0]*x0 + matrix[1][1]*y0 + matrix[1][2]*z0;
   expected[2] = matrix[2][0]*x0 + matrix[2][1]*y0 + matrix[2][2]*z0;
-  values[0] = x0;
-  values[1] = y0;
-  values[2] = z0;
-  align.transform(values);
 
-  for (int i = 0; i < 3; i++) {
-    if (!approxEqual(values[i], expected[i])) {
-      std::cerr << "Transformation failed with only rotation" << std::endl;
-      return -1;
-    }
-  }
+  align.rotate(x0, y0, z0);
 
-  align.toggleOffset(true);
-  align.toggleRotation(false);
-
-  expected[0] = x0 + ox;
-  expected[1] = y0 + oy;
-  expected[2] = z0 + oz;
-  values[0] = x0;
-  values[1] = y0;
-  values[2] = z0;
-  align.transform(values);
-
-  for (int i = 0; i < 3; i++) {
-    if (!approxEqual(values[i], expected[i])) {
-      std::cerr << "Transformation failed with no rotation" << std::endl;
-      return -1;
-    }
+  if (!approxEqual(x0, expected[0]) ||
+      !approxEqual(y0, expected[1]) ||
+      !approxEqual(z0, expected[2])) {
+    std::cerr << "Transformation failed with only rotation" << std::endl;
+    return -1;
   }
 
   return 0;
 }
 
-int test_inverseTransform() {
+int test_inverse() {
   const double rx = 0.1;
   const double ry = 0.2;
   const double rz = 0.3;
@@ -242,43 +198,32 @@ int test_inverseTransform() {
   align.setRotY(ry);
   align.setRotZ(rz);
 
-  double expected[3] = { x0, y0, z0 };
-  double values[3] = { x0, y0, z0 };
+  double x, y, z;
 
-  align.transform(values);
-  align.transform(values, true);
+  x = x0;
+  y = y0;
+  z = z0;
+  align.transform(x, y, z);
+  align.untransform(x, y, z);
 
-  for (int i = 0; i < 3; i++) {
-    if (!approxEqual(values[i], expected[i])) {
-      std::cerr << "Inverse transformation failed" << std::endl;
-      return -1;
-    }
+  if (!approxEqual(x, x0) ||
+      !approxEqual(y, y0) ||
+      !approxEqual(z, z0)) {
+    std::cerr << "Inverse transformation failed" << std::endl;
+    return -1;
   }
 
-  align.toggleRotation(false);
-  align.toggleOffset(true);
+  x = x0;
+  y = y0;
+  z = z0;
+  align.rotate(x, y, z);
+  align.unrotate(x, y, z);
 
-  align.transform(values);
-  align.transform(values, true);
-
-  for (int i = 0; i < 3; i++) {
-    if (!approxEqual(values[i], expected[i])) {
-      std::cerr << "Inverse transformation failed with no rotation" << std::endl;
-      return -1;
-    }
-  }
-
-  align.toggleRotation(true);
-  align.toggleOffset(false);
-
-  align.transform(values);
-  align.transform(values, true);
-
-  for (int i = 0; i < 3; i++) {
-    if (!approxEqual(values[i], expected[i])) {
-      std::cerr << "Inverse transformation failed with no translation" << std::endl;
-      return -1;
-    }
+  if (!approxEqual(x, x0) ||
+      !approxEqual(y, y0) ||
+      !approxEqual(z, z0)) {
+    std::cerr << "Inverse transformation failed" << std::endl;
+    return -1;
   }
 
   return 0;
@@ -290,8 +235,8 @@ int main() {
   try {
     if ((retval = test_setGet()) != 0) return retval;
     if ((retval = test_transform()) != 0) return retval;
-    if ((retval = test_partialTransform()) != 0) return retval;
-    if ((retval = test_inverseTransform()) != 0) return retval;
+    if ((retval = test_rotate()) != 0) return retval;
+    if ((retval = test_inverse()) != 0) return retval;
   }
   
   catch (std::exception& e) {

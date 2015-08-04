@@ -76,10 +76,26 @@ int test_pixelToSpace() {
   // Finally, check if this compares to the overal transformation of pixel
   // 0,1 in sensor 1
   double x, y, z;
-  device.pixelToSpace(0, 1, 1, x, y, z);
+  device[1].pixelToSpace(0, 1, x, y, z);
 
   if (!approxEqual(x, x0) || !approxEqual(y, y0) || !approxEqual(z, z0)) {
     std::cerr << "pixelToSpace failed to apply device transformation" << std::endl;
+    return -1;
+  }
+
+  // Compute the distance of the point +1,+1 away in pixel space
+  double xe0, ye0, ze0;
+  device[1].pixelToSpace(1, 2, xe0, ye0, ze0);
+  xe0 = std::fabs(xe0-x);
+  ye0 = std::fabs(ye0-y);
+  ze0 = std::fabs(ze0-z);
+
+  // Then compute the global error associated with that +1,+1 
+  double xe, ye, ze;
+  device[1].pixelErrToSpace(1, 1, xe, ye, ze);
+
+  if (!approxEqual(xe, xe0) || !approxEqual(ye, ye0) || !approxEqual(ze, ze0)) {
+    std::cerr << "pixelToSpace failed to transform errors" << std::endl;
     return -1;
   }
 

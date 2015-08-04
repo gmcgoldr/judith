@@ -10,7 +10,10 @@ bool approxEqual(double v1, double v2, double tol=1E-10) {
 }
 
 int test_pixelToSpace() {
+  // Note: this is more thoroughly tested in mechanics
   Mechanics::Sensor sensor;
+  sensor.setOffX(1.);
+  sensor.setOffY(2.);
   sensor.m_nrows = 2;
   sensor.m_ncols = 2;
   sensor.m_rowPitch = 1;
@@ -19,19 +22,19 @@ int test_pixelToSpace() {
   double x, y, z;
 
   sensor.pixelToSpace(0, 0, x, y, z);
-  if (x != -.5 || y != -.5 || z != 0) {
+  if (x != -.5+1 || y != -.5+2 || z != 0) {
     std::cerr << "pixelToSpace failed to transform 0,0" << std::endl;
     return -1;
   }
 
   sensor.pixelToSpace(1, 0, x, y, z);
-  if (x != +.5 || y != -.5 || z != 0) {
+  if (x != +.5+1 || y != -.5+2 || z != 0) {
     std::cerr << "pixelToSpace failed to transform 0,1" << std::endl;
     return -1;
   }
 
   sensor.pixelToSpace(1, 1, x, y, z);
-  if (x != +.5 || y != +.5 || z != 0) {
+  if (x != +.5+1 || y != +.5+2 || z != 0) {
     std::cerr << "pixelToSpace failed to transform 1,1" << std::endl;
     return -1;
   }
