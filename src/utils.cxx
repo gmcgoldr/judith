@@ -124,6 +124,8 @@ void linearFit(
 
   for (unsigned int i = 0; i < n; i++) {
     const double wt = 1. / (ye[i]*ye[i]);
+    if (!std::isfinite(wt))
+      throw std::runtime_error("Utils: linearFit: invalid weight");
     ss += wt;
     sx += x[i] * wt;
     sy += y[i] * wt;
