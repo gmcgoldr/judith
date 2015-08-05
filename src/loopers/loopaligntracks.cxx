@@ -70,7 +70,7 @@ void LoopAlignTracks::Chi2Minimizer::computeTrackPars(
       chi2);
   pars.chi2 += chi2;
 
-  pars.chi2 /= (double)nclusters;
+  pars.chi2 /= (double)(2*nclusters);  // per D.O.F.
 }
 
 LoopAlignTracks::Chi2Minimizer::Chi2Minimizer(
@@ -87,19 +87,15 @@ LoopAlignTracks::Chi2Minimizer::Chi2Minimizer(
     m_tracks(tracklets.begin(), tracklets.end()),
     m_ndim(0),
     m_minimizer(0) {
-  // Number of degrees of freedom to align per sensor. When in plane, do not
-  // align the x and y rotations
-  const unsigned ndof = (m_flags & INPLANE) ? 3 : 5;
-
   if (m_flags & REFERENCE) {
     // Don't align the first plane
-    m_ndim = ndof * (m_device->getNumSensors()-1);
+    m_ndim = 3 * (m_device->getNumSensors()-1);
   }
 
   // Configuration for DUT alignment
   else {
     // Align all sensors
-    m_ndim = ndof * m_device->getNumSensors();
+    m_ndim = 3 * m_device->getNumSensors();
     // Pre-compute the track parameters. They won't change since the DUT
     // clusters aren't used in the tracks
     m_trackPars.assign(m_tracks.size(), LoopAlignTracks::TrackPars());
@@ -119,18 +115,12 @@ double LoopAlignTracks::Chi2Minimizer::DoEval(const double* pars) const {
     // Don't align the first plane if this is a reference device
     if ((m_flags & REFERENCE) && (isensor == 0)) continue;
     Mechanics::Sensor& sensor = m_device->getSensor(isensor);
-    // The first two parameters for each sensor are the offset
     sensor.setAlignment(Mechanics::Alignment::OFFX, pars[ipar++]);
     sensor.setAlignment(Mechanics::Alignment::OFFY, pars[ipar++]);
-    // The next two parameters are rotations in X and Y which can be disabled
-    // since they don't always play nice
-    if (!(m_flags & INPLANE)) {
-      sensor.setAlignment(Mechanics::Alignment::ROTX, pars[ipar++]);
-      sensor.setAlignment(Mechanics::Alignment::ROTY, pars[ipar++]);
-    }
-    // Finally the rotation in z
     sensor.setAlignment(Mechanics::Alignment::ROTZ, pars[ipar++]);
   }
+
+  assert(ipar == m_ndim && "Didn't assign all parameters");
 
   // Loop through all the tracks, computing their chi^2
   const size_t ntracks = m_tracks.size();
@@ -171,18 +161,16 @@ double LoopAlignTracks::Chi2Minimizer::DoEval(const double* pars) const {
 
         sum += dx*dx + dy*dy;
       }
-      sum /= (double)nmatches;
+      sum /= (double)(2*nmatches);
     }
   }
 
   const double value = sum / (double)ntracks;
 
-  if (m_minimizer)
-    std::printf(
+  if (m_minimizer) std::printf(
         "\rMinimization chi^2 and EDM: %.4e, %.1e",
         value, m_minimizer->Edm());
-  else
-    std::printf(
+  else std::printf(
         "\rMinimization chi^2: %.4e", value);
 
   return value;
@@ -201,10 +189,7 @@ LoopAlignTracks::LoopAlignTracks(
     // at least one device in the vector
     m_tracking(devices[0]->getNumSensors()),
     m_translationScale(1),  // 1 pixel translation scale
-    m_translationLimit(-1),  // no need to really limit translations
     m_rotationScale(0.01),  // ~ half degree rotation scale
-    m_rotationLimit(0.1),  // 5 degree window in which to align rotations
-    m_inPlane(false),  // default to aligning all d.o.f's
     m_tolerance(1e-2) {  // good tolerance for minuit
   if (m_devices.size() > 2)
     throw std::runtime_error(
@@ -220,10 +205,7 @@ LoopAlignTracks::LoopAlignTracks(
     m_trackChi2(device),
     m_tracking(device.getNumSensors()),
     m_translationScale(1),
-    m_translationLimit(-1),
     m_rotationScale(0.01),
-    m_rotationLimit(0.1),
-    m_inPlane(false),
     m_tolerance(1e-2) { 
   addAnalyzer(m_trackChi2);
 }
@@ -253,7 +235,6 @@ void LoopAlignTracks::finalize() {
 
   int evalFlags = 0;
   if (isRef) evalFlags |= Chi2Minimizer::REFERENCE;
-  if (m_inPlane) evalFlags |= Chi2Minimizer::INPLANE;
 
   // Build the min function using the list of light-weight clusters and tracks
   // build byt the trackChi2 analyzer. The minimzer will copy the objects into
@@ -287,53 +268,12 @@ void LoopAlignTracks::finalize() {
     double x1, y1, z1;
     sensor.pixelToSpace(1,1,x1,y1,z1);
     // Use to set the translation scale as 1 pixel
-    const double sizeX = std::fabs(x0-x1);
-    const double sizeY = std::fabs(y0-y1);
+    const double scaleX = std::fabs(x0-x1) * m_translationScale;
+    const double scaleY = std::fabs(y0-y1) * m_translationScale;
 
-    // Set up the 5 parameters for this sensor
-    for (int i = 0; i < 5; i++) {
-      double value = 0;
-      double scale = 0;
-      double limit = 0;
-
-      switch (i) {
-      case 0:
-        value = sensor.getOffX();
-        scale = m_translationScale*sizeX;
-        limit = m_translationLimit;
-        break;
-      case 1:
-        value = sensor.getOffY();
-        scale = m_translationScale*sizeY;
-        limit = m_translationLimit;
-        break;
-      case 2:
-        if (m_inPlane) continue;  // don't use this parameter if in plane
-        value = sensor.getRotX();
-        scale = m_rotationScale;
-        limit = m_rotationLimit;
-        break;
-      case 3:
-        if (m_inPlane) continue;
-        value = sensor.getRotY();
-        scale = m_rotationScale;
-        limit = m_rotationLimit;
-        break;
-      case 4:
-        value = sensor.getRotZ();
-        scale = m_rotationScale;
-        limit = m_rotationLimit;
-        break;
-      default:
-        assert(false && "Wrong number of cases");
-      }
-
-      minimizer->SetVariable(ipar, "", value, scale);
-      if (limit > 0)
-        minimizer->SetVariableLimits(ipar, value-limit, value+limit);
-
-      ipar += 1;
-    }
+    minimizer->SetVariable(ipar++, "", sensor.getOffX(), scaleX);
+    minimizer->SetVariable(ipar++, "", sensor.getOffY(), scaleY);
+    minimizer->SetVariable(ipar++, "", sensor.getRotZ(), m_rotationScale);
   }
 
   minimizer->SetTolerance(m_tolerance);
@@ -347,10 +287,6 @@ void LoopAlignTracks::finalize() {
     Mechanics::Sensor& sensor = device.getSensor(isensor);
     sensor.setAlignment(Mechanics::Alignment::OFFX, pars[ipar++]);
     sensor.setAlignment(Mechanics::Alignment::OFFY, pars[ipar++]);
-    if (!m_inPlane) {
-      sensor.setAlignment(Mechanics::Alignment::ROTX, pars[ipar++]);
-      sensor.setAlignment(Mechanics::Alignment::ROTY, pars[ipar++]);
-    }
     sensor.setAlignment(Mechanics::Alignment::ROTZ, pars[ipar++]);
   }
 }

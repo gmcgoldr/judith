@@ -5,6 +5,7 @@
 #include <list>
 
 #include <Math/IFunction.h>
+#include <Math/Minimizer.h>
 
 #include "processors/tracking.h"
 #include "analyzers/trackchi2.h"
@@ -87,10 +88,7 @@ public:
   Processors::Tracking m_tracking;
 
   double m_translationScale;
-  double m_translationLimit;
   double m_rotationScale;
-  double m_rotationLimit;
-  bool m_inPlane;
   double m_tolerance;
 
   LoopAlignTracks(

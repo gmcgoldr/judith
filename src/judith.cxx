@@ -420,19 +420,12 @@ int main(int argc, const char** argv) {
     if (options.hasArg("align-tracks-translation-scale"))
       looper.m_translationScale = strToFloat(
           options.getValue("align-tracks-translation-scale"));
-    if (options.hasArg("align-tracks-translation-limit"))
-      looper.m_translationLimit = strToFloat(
-          options.getValue("align-tracks-translation-limit"));
     if (options.hasArg("align-tracks-rotation-scale"))
       looper.m_rotationScale = strToFloat(
           options.getValue("align-tracks-rotation-scale"));
-    if (options.hasArg("align-tracks-rotation-limit"))
-      looper.m_rotationLimit = strToFloat(
-          options.getValue("align-tracks-rotation-limit"));
     if (options.hasArg("align-tracks-tolerance"))
       looper.m_tolerance = strToFloat(
           options.getValue("align-tracks-tolerance"));
-    looper.m_inPlane = options.evalBoolArg("align-tracks-inplane");
 
     // Apply generic looping options to the looper
     configureLooper(options, looper);
