@@ -136,13 +136,22 @@ void Looper::loop() {
     throw std::runtime_error("Looper::loop: nprocess exceeds range");
   if (m_nstep < 1)
     throw std::runtime_error("Looper::loop: step size can't be smaller than 1");
+
+  // Don't want to split event range computation from looping, since the public
+  // start, process... variables could change. Instead, if derived class needs
+  // these computed and verified values, then it can overwrite preLoop.
+  preLoop();
   
   for (m_ievent = m_start; m_ievent < m_start+m_nprocess; m_ievent += m_nstep) {
     // If a print interval is given, and this event is on it, print progress
     if (m_printInterval && (m_ievent%m_printInterval == 0)) printProgress();
     // Read this event from each input file
-    for (size_t i = 0; i < m_inputs.size(); i++)
+    for (size_t i = 0; i < m_inputs.size(); i++) {
       m_events[i] = &m_inputs[i]->readEvent(m_ievent);
+      // Don't try to do anything if any device has an invalid event (the event
+      // might have bad data)
+      if (m_events[i]->getInvalid()) continue;
+    }
     // Execute this looper's event code
     execute();
   }

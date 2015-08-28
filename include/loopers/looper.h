@@ -30,6 +30,9 @@ private:
   Looper(const Looper&);
   Looper& operator=(const Looper&);
 
+  /** Called once event range is calculated */
+  virtual void preLoop() {}
+
 protected:
   /** List of inputs from which to read events */
   const std::vector<Storage::StorageI*> m_inputs;
