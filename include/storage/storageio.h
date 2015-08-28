@@ -207,6 +207,7 @@ public:
   size_t getNumPlanes() const { return m_numPlanes; }
   FileMode getFileMode() const { return m_fileMode; }
   MaskMode getMaskMode() const { return m_maskMode; }
+  int getTreeMask() const { return m_treeMask; }
 
   friend class Event;  // Access to cache
 };
