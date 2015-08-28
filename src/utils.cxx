@@ -188,5 +188,113 @@ void linePlaneIntercept(
   z = d * 1.0 + 0.0;
 }
 
+void synchronize(
+    const std::vector<ULong64_t>& times1,
+    const std::vector<ULong64_t>& times2,
+    std::vector<bool>& write1,
+    std::vector<bool>& write2,
+    double ratio,
+    double threshold,
+    unsigned nbuffer) {
+  const size_t nevents = times1.size();
+  if (times2.size() != nevents)
+    throw std::runtime_error("Untils: synchronize: inconsistent nevents");
+
+  // By default, all events are not being written, until they are assessed to
+  // be good
+  write1.assign(nevents, false);
+  write2.assign(nevents, false);
+
+  // Keep track of which events initially passed synchronization
+  std::vector<bool> buffPass(nbuffer, false);
+  // Index of event to be written from device 1
+  std::vector<size_t> buffIndex1(nbuffer, 0);
+  // Index of event to be written from device 2
+  std::vector<size_t> buffIndex2(nbuffer, 0);
+  size_t npass = 0;  // number of events passing in buffer
+  size_t ibuff = 0;  // current buffer index
+
+  // Delta of an event is defined as the time to the next trigger
+
+  // Index of event whose delta is being evaluated
+  size_t i1 = 0;
+  size_t i2 = 0;
+
+  while (i1+1 < nevents && i2+1 < nevents) {
+    // Setp to the next event
+    size_t next1 = 1;
+    size_t next2 = 1;
+    // Ensure there is another event from which to compute delta
+    if (i1+next1 >= nevents || i2+next2 >= nevents) break;
+    // Compute the difference from the current event to the next
+    const double delta1 = times1[i1+next1] - times1[i1];
+    const double delta2 = times2[i2+next2] - times2[i2];
+    // evaluate how closely the two differences agree
+    double diff = delta2 - delta1 * ratio;
+
+    // Update npass to remove the one being overwritten
+    npass -= buffPass[ibuff];
+    // Store if this event passed or failed
+    buffPass[ibuff] = diff < threshold;
+    // Count this event into the number of good events in buffer
+    npass += diff < threshold;
+
+    // If the difference is above threshold, try to fix the problem
+    if (diff >= threshold) {
+      size_t ioff = 0;  // index of offset trial
+
+      while (true) {
+        // 0, 3 ... try moving times1 up
+        if ((ioff+0) % 3 == 0) {
+          next1 = 1 + (ioff+3)/3;
+          next2 = 1;
+        }
+        // 1, 4, ... try moving times2 up
+        else if ((ioff+2) % 3 == 0) {
+          next1 = 1;
+          next2 = 1 + (ioff+3)/3;
+        }
+        // 2, 5, ... try moving both up
+        else if ((ioff+1) % 3 == 0) {
+          next1 = 1 + (ioff+3)/3;
+          next2 = 1 + (ioff+3)/3;
+        }
+
+        // Ensure there is another event from which to compute delta
+        if (i1+next1 >= nevents || i2+next2 >= nevents) break;
+
+        // Update the difference with the new offset
+        const double delta1 = times1[i1+next1] - times1[i1];
+        const double delta2 = times2[i2+next2] - times2[i2];
+        diff = delta2 - delta1 * ratio;
+
+        // Found a good offset
+        if (diff < threshold) break;
+
+        ioff += 1;
+      }
+    }
+
+    // Otherwise simply push the indices into the buffer
+    else {
+      buffIndex1[ibuff] = i1;
+      buffIndex2[ibuff] = i2;
+    }
+
+    // If the buffer is fully synchronized, then the events at the back are
+    // good for writing
+
+    if (npass == nbuffer) {
+      write1[buffIndex1[(ibuff+1) % nbuffer]] = true;
+      write2[buffIndex2[(ibuff+1) % nbuffer]] = true;
+    }
+
+    // Move to the next buffer spot, and the next set of timestamps
+    ibuff = (ibuff+1) % nbuffer;
+    i1 += next1;
+    i2 += next2;
+  }
+}
+
 }
 
