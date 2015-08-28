@@ -10,6 +10,15 @@
 
 namespace Analyzers {
 
+Analyzer::Analyzer(size_t ndevices) :
+    m_devices(),
+    m_ndevices(ndevices),
+    m_events(m_ndevices, 0),
+    m_finalized(false) {
+  if (m_ndevices == 0)
+    throw std::runtime_error("Analyzer::Analyzer: empty device vector");
+}
+
 Analyzer::Analyzer(const std::vector<Mechanics::Device*>& devices) :
     // Can't directly cast vector to vector of consts, initialize from iterators
     m_devices(devices.begin(), devices.end()),

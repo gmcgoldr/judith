@@ -47,6 +47,8 @@ protected:
   virtual void process() = 0;
 
 public:
+  /** Constructor for an analyzer which doesn't use device information */
+  Analyzer(size_t ndevices);
   /** Constructor for an analyzer which needs device information */
   Analyzer(const std::vector<Mechanics::Device*>& devices);
   /** Constructor for const devices */
