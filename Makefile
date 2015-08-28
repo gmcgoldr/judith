@@ -55,8 +55,8 @@ build/storageo.o: src/storage/storageo.cxx include/storage/storageo.h
 
 ### Mechanics library ###
 
-lib/libjudmechanics.a: build/alignment.o build/sensor.o build/device.o build/mechparsers.o
-	ar ru lib/libjudmechanics.a build/alignment.o build/sensor.o build/device.o build/mechparsers.o
+lib/libjudmechanics.a: build/utils.o build/alignment.o build/sensor.o build/device.o build/mechparsers.o
+	ar ru lib/libjudmechanics.a build/utils.o build/alignment.o build/sensor.o build/device.o build/mechparsers.o
 
 build/alignment.o: src/mechanics/alignment.cxx include/mechanics/alignment.h
 	$(CC) $(CFLAGS) $(INC) -c src/mechanics/alignment.cxx -o build/alignment.o
@@ -89,8 +89,8 @@ build/proctracking.o: src/processors/tracking.cxx include/processors/tracking.h
 	
 ### Analyzers library ###
 
-lib/libjudana.a: build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o
-	ar ru lib/libjudana.a build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o
+lib/libjudana.a: build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o build/anasynchronization.o
+	ar ru lib/libjudana.a build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o build/anasynchronization.o
 
 build/analyzer.o: src/analyzers/analyzer.cxx include/analyzers/analyzer.h
 	$(CC) $(CFLAGS) $(INC) -c src/analyzers/analyzer.cxx -o build/analyzer.o
@@ -107,10 +107,13 @@ build/anatrackresiduals.o: src/analyzers/trackresiduals.cxx include/analyzers/tr
 build/anatrackchi2.o: src/analyzers/trackchi2.cxx include/analyzers/trackchi2.h
 	$(CC) $(CFLAGS) $(INC) -c src/analyzers/trackchi2.cxx -o build/anatrackchi2.o
 
+build/anasynchronization.o: src/analyzers/synchronization.cxx include/analyzers/synchronization.h
+	$(CC) $(CFLAGS) $(INC) -c src/analyzers/synchronization.cxx -o build/anasynchronization.o
+
 ### Loopers library ###
 
-lib/libjudloop.a: build/utils.o build/looper.o build/loopprocess.o build/loopaligncorr.o build/looptransfers.o build/loopaligntracks.o
-	ar ru lib/libjudloop.a build/utils.o build/looper.o build/loopprocess.o build/loopaligncorr.o build/looptransfers.o build/loopaligntracks.o
+lib/libjudloop.a: build/utils.o build/looper.o build/loopprocess.o build/loopaligncorr.o build/looptransfers.o build/loopaligntracks.o build/loopsynchronize.o
+	ar ru lib/libjudloop.a build/utils.o build/looper.o build/loopprocess.o build/loopaligncorr.o build/looptransfers.o build/loopaligntracks.o build/loopsynchronize.o
 
 build/looper.o: src/loopers/looper.cxx include/loopers/looper.h
 	$(CC) $(CFLAGS) $(INC) -c src/loopers/looper.cxx -o build/looper.o
@@ -126,6 +129,9 @@ build/looptransfers.o: src/loopers/looptransfers.cxx include/loopers/looptransfe
 
 build/loopaligntracks.o: src/loopers/loopaligntracks.cxx include/loopers/loopaligntracks.h
 	$(CC) $(CFLAGS) $(INC) -c src/loopers/loopaligntracks.cxx -o build/loopaligntracks.o
+
+build/loopsynchronize.o: src/loopers/loopsynchronize.cxx include/loopers/loopsynchronize.h
+	$(CC) $(CFLAGS) $(INC) -c src/loopers/loopsynchronize.cxx -o build/loopsynchronize.o
 
 clean:
 	rm -rf build/ lib/* bin/*
