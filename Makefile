@@ -1,6 +1,6 @@
 CC := g++
 CFLAGS := `root-config --cflags` -g -O3 -Wall
-LIB := -Llib -ljudstorage -ljudmechanics -ljudproc -ljudana -ljudloop `root-config --ldflags --glibs` -O2
+LIB := -Llib -ljudloop -ljudana -ljudproc -ljudmechanics -ljudstorage `root-config --ldflags --glibs` -O2
 INC := -Iinclude
 
 # Run these commands before entering targets
@@ -10,8 +10,8 @@ $(shell mkdir -p bin)
 
 ### Executable ###
 
-bin/judith: build/judith.o build/options.o lib/libjudstorage.a lib/libjudmechanics.a lib/libjudproc.a lib/libjudana.a lib/libjudloop.a
-	$(CC) build/options.o build/judith.o $(LIB) -o bin/judith
+bin/judith: build/judith.o build/options.o lib/libjudloop.a lib/libjudana.a lib/libjudproc.a lib/libjudmechanics.a lib/libjudstorage.a 
+	$(CC) build/judith.o build/options.o $(LIB) -o bin/judith
 
 build/judith.o: src/judith.cxx
 	$(CC) $(CFLAGS) $(INC) -c src/judith.cxx -o build/judith.o
