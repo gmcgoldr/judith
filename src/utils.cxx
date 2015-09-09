@@ -230,7 +230,7 @@ void synchronize(
     const double delta1 = times1[i1+next1] - times1[i1];
     const double delta2 = times2[i2+next2] - times2[i2];
     // evaluate how closely the two differences agree
-    double diff = delta2 - delta1 * ratio;
+    double diff = std::fabs(delta2 - delta1 * ratio);
 
     // Update npass to remove the one being overwritten
     npass -= buffPass[ibuff];
@@ -243,7 +243,7 @@ void synchronize(
     if (diff >= threshold) {
       size_t ioff = 0;  // index of offset trial
 
-      while (true) {
+      while (diff >= threshold) {
         // 0, 3 ... try moving times1 up
         if ((ioff+0) % 3 == 0) {
           next1 = 1 + (ioff+3)/3;
@@ -256,8 +256,15 @@ void synchronize(
         }
         // 2, 5, ... try moving both up
         else if ((ioff+1) % 3 == 0) {
-          next1 = 1 + (ioff+3)/3;
-          next2 = 1 + (ioff+3)/3;
+          // NOTE: if the distance between i and i+next is very large, then the
+          // uncertainty on that distance can overcome the threshold. Those 
+          // events are typically rare (e.g. busy during buffer write out). 
+          // Best to ignore event i, and move onto the next, since its distance
+          // to next will likely be smaller.
+          i1 += 1;
+          i2 += 1;
+          next1 = 1;
+          next2 = 1;
         }
 
         // Ensure there is another event from which to compute delta
@@ -266,10 +273,7 @@ void synchronize(
         // Update the difference with the new offset
         const double delta1 = times1[i1+next1] - times1[i1];
         const double delta2 = times2[i2+next2] - times2[i2];
-        diff = delta2 - delta1 * ratio;
-
-        // Found a good offset
-        if (diff < threshold) break;
+        diff = std::fabs(delta2 - delta1 * ratio);
 
         ioff += 1;
       }
