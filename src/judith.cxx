@@ -21,6 +21,7 @@
 #include "loopers/loopaligncorr.h"
 #include "loopers/looptransfers.h"
 #include "loopers/loopaligntracks.h"
+#include "loopers/loopsynchronize.h"
 
 void printHelp() {
   printf("usage: judith <command> [<args>]\n");
@@ -42,9 +43,11 @@ void printHelp() {
   printf("  %-15s %s\n", "process", "Generate clusters and tracks from the given input");
   printf("  %-15s %s\n", "align-corr", "Align the sensors by plane correlations");
   printf("  %-15s %s\n", "align-tracks", "Align the sensors using track residuals");
+  printf("  %-15s %s\n", "sync", "Synchronize two device inputs");
   std::cout << std::endl;
 }
 
+// Turn off storage branches based on options read from configuration
 void fillBranchMasks(
     const Options& options,
     std::set<std::string> hitBranchesOff,
@@ -88,6 +91,7 @@ void fillBranchMasks(
   }
 }
 
+// Build device objects based on those found in configuration
 void generateDevices(const Options& options, Mechanics::Devices& devices) {
   // The values are paths to files that can be parsed into devices
   const Options::Values& values = options.getValues("device");
@@ -98,6 +102,7 @@ void generateDevices(const Options& options, Mechanics::Devices& devices) {
     devices.addDevice(Mechanics::parseDevice(*it));
 }
 
+// Mask device planes based on configuration
 void maskPlanes(const Options& options, Mechanics::Devices& devices) {
   const Options::Values& values = options.getValues("mask-plane");
   // Iterate two at a time, the first value is the device name, second is the
@@ -109,6 +114,7 @@ void maskPlanes(const Options& options, Mechanics::Devices& devices) {
   }
 }
 
+// Configure a looper with generic configuration options
 void configureLooper(const Options& options, Loopers::Looper& looper) {
   // Configure a base `Looper` object from standard options
   if (options.hasArg("first"))
@@ -176,6 +182,8 @@ int main(int argc, const char** argv) {
 
   // Remove masked planes from the devices
   maskPlanes(options, devices);
+
+  // Note that each command will manage its inputs and ouputs differently
 
   const std::string command = argv[1];
 
@@ -307,16 +315,15 @@ int main(int argc, const char** argv) {
       return -1;
     }
 
-    // Build the input storages for the devices to align
+    // Build the inputs
     std::vector<Storage::StorageI*> inputs;
-    for (size_t i = 0; i < inputNames.size(); i++) {
-      Storage::StorageI* input = new Storage::StorageI(
+    for (size_t i = 0; i < inputNames.size(); i++)
+      inputs.push_back(
+          new Storage::StorageI(
           inputNames[i],
           // Don't read tracks or clusters, new clusters will be made
           Storage::StorageIO::TRACKS | Storage::StorageIO::CLUSTERS,
-          &devices[i].getSensorMask());
-      inputs.push_back(input);
-    }
+          &devices[i].getSensorMask()));
 
     // Prepare a processing looper with the devices which it will align
     Loopers::LoopAlignCorr looper(inputs, devices.getVector());
@@ -367,15 +374,15 @@ int main(int argc, const char** argv) {
       return -1;
     }
 
-    // Build the input storages for the devices to align
+    // Build the inputs
     std::vector<Storage::StorageI*> inputs;
-    for (size_t i = 0; i < inputNames.size(); i++) {
-      Storage::StorageI* input = new Storage::StorageI(
-          inputNames[i],  // ith input file
+    for (size_t i = 0; i < inputNames.size(); i++)
+      inputs.push_back(
+          new Storage::StorageI(
+          inputNames[i],
+          // Don't read tracks or clusters, new clusters will be made
           Storage::StorageIO::TRACKS | Storage::StorageIO::CLUSTERS,
-          &devices[i].getSensorMask());
-      inputs.push_back(input);
-    }
+          &devices[i].getSensorMask()));
 
     // Prepare a processing looper with the devices which it will align
     Loopers::LoopAlignTracks looper(inputs, devices.getVector());
@@ -441,6 +448,65 @@ int main(int argc, const char** argv) {
     // Clear the inputs from memory
     for (std::vector<Storage::StorageI*>::iterator it = inputs.begin();
         it != inputs.end(); ++it)
+      delete *it;
+  }
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Synchronization
+
+  else if (command == "sync") {
+    const Options::Values& inputNames = options.getValues("input");
+    const Options::Values& outputNames = options.getValues("output");
+    if (inputNames.size() != 2) {
+      std::cerr << "ERROR: need at exactly 2 inputs" << std::endl;
+      return -1;
+    }
+    if (inputNames.size() != devices.getNumDevices()) {
+      std::cerr << "ERROR: need one device for each input" << std::endl;
+      return -1;
+    }
+    if (outputNames.size() != inputNames.size()) {
+      std::cerr << "ERROR: need one output for each input" << std::endl;
+      return -1;
+    }
+
+    // Build the inputs
+    std::vector<Storage::StorageI*> inputs;
+    for (size_t i = 0; i < inputNames.size(); i++)
+      inputs.push_back(new Storage::StorageI(
+          inputNames[i], 0, &devices[i].getSensorMask()));
+
+    // Build the ouputs
+    std::vector<Storage::StorageO*> outputs;
+    for (size_t i = 0; i < inputNames.size(); i++)
+      outputs.push_back(new Storage::StorageO(
+          outputNames[i],
+          // Copy the state of the input file
+          inputs[i]->getNumPlanes(),
+          inputs[i]->getTreeMask(),
+          &inputs[i]->getHitsBranchesOff(),
+          &inputs[i]->getClustersBranchesOff(),
+          &inputs[i]->getTracksBranchesOff(),
+          &inputs[i]->getEventInfoBranchesOff()));
+
+    // Prepare a processing looper with the devices which it will align
+    Loopers::LoopSynchronize looper(inputs, outputs);
+
+    // Apply generic looping options to the looper
+    configureLooper(options, looper);
+
+    // Run the looper
+    looper.loop();
+    looper.finalize();
+
+    // Clear the inputs from memory
+    for (std::vector<Storage::StorageI*>::iterator it = inputs.begin();
+        it != inputs.end(); ++it)
+      delete *it;
+
+    // Clear the ouputs from memory
+    for (std::vector<Storage::StorageO*>::iterator it = outputs.begin();
+        it != outputs.end(); ++it)
       delete *it;
   }
 
