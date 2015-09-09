@@ -119,7 +119,7 @@ void Looper::printProgress() {
     std::printf((progress*50>i) ? "=" : " ");
   std::printf("] ");
   // Print also the % done, and the bandwidth
-  std::printf("%3d%%, %5.1f us", (int)(progress*100), bandwidth);
+  std::printf("%3d%%, %6.1f us", (int)(progress*100), bandwidth);
   // Show on the output (don't buffer)
   std::cout << std::flush;
 }
@@ -145,13 +145,16 @@ void Looper::loop() {
   for (m_ievent = m_start; m_ievent < m_start+m_nprocess; m_ievent += m_nstep) {
     // If a print interval is given, and this event is on it, print progress
     if (m_printInterval && (m_ievent%m_printInterval == 0)) printProgress();
+    bool invalid = false;
     // Read this event from each input file
     for (size_t i = 0; i < m_inputs.size(); i++) {
       m_events[i] = &m_inputs[i]->readEvent(m_ievent);
       // Don't try to do anything if any device has an invalid event (the event
       // might have bad data)
-      if (m_events[i]->getInvalid()) continue;
+      invalid |= m_events[i]->getInvalid();
+      if (invalid) break;
     }
+    if (invalid) continue;
     // Execute this looper's event code
     execute();
   }
