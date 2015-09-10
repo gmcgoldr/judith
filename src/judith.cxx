@@ -9,6 +9,7 @@
 #include <TApplication.h>
 
 #include "options.h"
+#include "rootstyle.h"
 #include "storage/storagei.h"
 #include "storage/storageo.h"
 #include "mechanics/device.h"
@@ -132,6 +133,8 @@ int main(int argc, const char** argv) {
   std::cout << "\nStarting Judith\n" << std::endl;
 
   TApplication app("App", 0, 0);
+  
+  RS::setStyle();
 
   Options options;
   options.defineShort('i', "input");

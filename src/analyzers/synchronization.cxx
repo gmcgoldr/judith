@@ -10,7 +10,9 @@
 
 #include <TCanvas.h>
 #include <TH1D.h>
+#include <TLegend.h>
 
+#include "rootstyle.h"
 #include "utils.h"
 #include "storage/event.h"
 #include "storage/plane.h"
@@ -140,11 +142,22 @@ void Synchronization::finalize() {
 
   TCanvas* can = new TCanvas("Canvas", "Canvas", 800, 600);
 
-  m_histPreDiffs->SetLineColor(kBlue);
-  m_histPreSpacings->SetLineColor(kRed);
+  m_histPreDiffs->SetLineColor(RS::blue);
+  m_histPreSpacings->SetLineColor(RS::red);
+
+  m_histPreDiffs->GetXaxis()->SetTitle("Device 1 Time");
+  m_histPreDiffs->GetYaxis()->SetTitle("Events");
 
   m_histPreDiffs->Draw();
   m_histPreSpacings->Draw("SAME");
+
+  TLegend legend(0.6, 0.9, 0.9, 0.9-0.045*2);
+  legend.AddEntry(m_histPreSpacings, "Trigger spacing", "l");
+  legend.AddEntry(m_histPreDiffs, "Spacing difference", "l");
+  legend.Draw("SAME");
+
+  can->SetLogy();
+
   can->WaitPrimitive();
 
   Utils::synchronize(
