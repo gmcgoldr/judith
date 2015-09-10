@@ -9,8 +9,8 @@ bool approxEqual(double v1, double v2, double tol=1E-10) {
 }
 
 int test_good() {
-  std::vector<ULong64_t> times1 = { 0, 1, 2, 3, 4,  5,  6};
-  std::vector<ULong64_t> times2 = { 0, 2, 4, 6, 8, 10, 12};
+  std::vector<ULong64_t> times1 = { 0, 11, 22, 34, 41,  52,  64 };
+  std::vector<ULong64_t> times2 = { 0, 22, 44, 68, 82, 104, 128 };
 
   std::vector<bool> target1 = { 1, 1, 1, 1, 0, 0, 0};
   std::vector<bool> target2 = { 1, 1, 1, 1, 0, 0, 0};
@@ -31,8 +31,8 @@ int test_good() {
 }
 
 int test_basic() {
-  std::vector<ULong64_t> times1 = { 0, 1, 2, 3, 4,  5,  6};
-  std::vector<ULong64_t> times2 = { 0,    4, 6, 8, 10, 12, 14};
+  std::vector<ULong64_t> times1 = { 0, 11, 22, 34, 41,  52,  64 };
+  std::vector<ULong64_t> times2 = { 0,     44, 68, 82, 104, 128, 142 };
 
   // Can't write 1st since buffer not synchronized, skip second on time1,
   // then write next two which have synchronized buffers and drop last three
@@ -64,8 +64,8 @@ int test_basic() {
 }
 
 int test_double() {
-  std::vector<ULong64_t> times1 = { 0, 1, 2, 3, 4,  5,  6};
-  std::vector<ULong64_t> times2 = { 0,       6, 8, 10, 12, 14, 16};
+  std::vector<ULong64_t> times1 = { 0, 11, 22, 34, 41,  52,  64 };
+  std::vector<ULong64_t> times2 = { 0,         68, 82, 104, 128, 142, 164 };
 
   std::vector<bool> target1 = { 0, 0, 0, 1, 0, 0, 0};
   std::vector<bool> target2 = { 0, 1, 0, 0, 0, 0, 0};

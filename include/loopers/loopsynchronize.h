@@ -1,11 +1,11 @@
 #ifndef LOOPSYNCHRONIZE_H
 #define LOOPSYNCHRONIZE_H
 
+#include "analyzers/synchronization.h"
 #include "loopers/looper.h"
 
 namespace Storage { class StorageI; }
 namespace Storage { class StorageO; }
-namespace Analyzers { class Synchronization; }
 
 namespace Loopers {
 
@@ -23,9 +23,8 @@ private:
     * events to the outputs */
   bool m_storing;
 
-  /** Pointer to the object which computes the synchronization timing. The
-    * object will constructed once the event range is known */
-  Analyzers::Synchronization* m_synchronization;
+  /** Analyzer which performs the event-by-event computations */
+  Analyzers::Synchronization m_synchronization;
 
   void preLoop();
 
@@ -33,7 +32,7 @@ public:
   LoopSynchronize(
       const std::vector<Storage::StorageI*>& inputs,
       const std::vector<Storage::StorageO*>& outputs);
-  ~LoopSynchronize();
+  ~LoopSynchronize() {}
 
   /** Execute read event time stamsp or write to the output */
   void execute();
@@ -42,7 +41,7 @@ public:
   void finalize();
 
   /** Provide access to synchronization object for configuring */
-  Analyzers::Synchronization& getAnalyzer() { return *m_synchronization; }
+  Analyzers::Synchronization& getAnalyzer() { return m_synchronization; }
 };
 
 }

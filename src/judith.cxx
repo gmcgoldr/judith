@@ -461,10 +461,6 @@ int main(int argc, const char** argv) {
       std::cerr << "ERROR: need at exactly 2 inputs" << std::endl;
       return -1;
     }
-    if (inputNames.size() != devices.getNumDevices()) {
-      std::cerr << "ERROR: need one device for each input" << std::endl;
-      return -1;
-    }
     if (outputNames.size() != inputNames.size()) {
       std::cerr << "ERROR: need one output for each input" << std::endl;
       return -1;
@@ -473,8 +469,7 @@ int main(int argc, const char** argv) {
     // Build the inputs
     std::vector<Storage::StorageI*> inputs;
     for (size_t i = 0; i < inputNames.size(); i++)
-      inputs.push_back(new Storage::StorageI(
-          inputNames[i], 0, &devices[i].getSensorMask()));
+      inputs.push_back(new Storage::StorageI(inputNames[i], 0));
 
     // Build the ouputs
     std::vector<Storage::StorageO*> outputs;
@@ -494,6 +489,23 @@ int main(int argc, const char** argv) {
 
     // Apply generic looping options to the looper
     configureLooper(options, looper);
+
+    // Configure its synchronization analyzer
+    if (options.hasArg("sync-min-stats"))
+      looper.getAnalyzer().m_minStats = strToInt(
+          options.getValue("sync-min-stats"));
+    if (options.hasArg("sync-threshold"))
+      looper.getAnalyzer().m_threshold = strToFloat(
+          options.getValue("sync-threshold"));
+    if (options.hasArg("sync-consecutive"))
+      looper.getAnalyzer().m_nconsecutive = strToInt(
+          options.getValue("sync-consecutive"));
+    if (options.hasArg("sync-scale"))
+      looper.getAnalyzer().m_scale = strToFloat(
+          options.getValue("sync-scale"));
+    if (options.hasArg("sync-ratio"))
+      looper.getAnalyzer().m_ratio = strToFloat(
+          options.getValue("sync-ratio"));
 
     // Run the looper
     looper.loop();

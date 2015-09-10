@@ -241,59 +241,77 @@ void synchronize(
 
     // If the difference is above threshold, try to fix the problem
     if (diff >= threshold) {
-      size_t ioff = 0;  // index of offset trial
+      // Original indices
+      const size_t i1orig = i1;
+      const size_t i2orig = i2;
 
-      while (diff >= threshold) {
+      size_t ioff = 0;  // index of offset trial
+      size_t noff = 1;
+
+      //std::cout << i1orig << ", " << i2orig << " : " << diff << std::endl;
+
+      // Try many correction offsets. The threshold is some uncertainty on the
+      // inter-trigger spacing, so it might have a sqrt(n) dependence on the
+      // number of missed triggers (adding in quadrature the uncertainty on
+      // each). It seems that linear scaling would be excessive.
+      while (diff >= std::sqrt(threshold*threshold*noff)) {
+        // The actual increment only increases at each 3rd offset trial
+        noff = (ioff+3)/3;
+
         // 0, 3 ... try moving times1 up
         if ((ioff+0) % 3 == 0) {
-          next1 = 1 + (ioff+3)/3;
+          i1 = i1orig;
+          i2 = i2orig;
+          next1 = 1 + noff;
           next2 = 1;
         }
         // 1, 4, ... try moving times2 up
         else if ((ioff+2) % 3 == 0) {
+          i1 = i1orig;
+          i2 = i2orig;
           next1 = 1;
-          next2 = 1 + (ioff+3)/3;
+          next2 = 1 + noff;
         }
-        // 2, 5, ... try moving both up
+        // 2, 5, ... try moving past possible corruption
         else if ((ioff+1) % 3 == 0) {
-          // NOTE: if the distance between i and i+next is very large, then the
-          // uncertainty on that distance can overcome the threshold. Those 
-          // events are typically rare (e.g. busy during buffer write out). 
-          // Best to ignore event i, and move onto the next, since its distance
-          // to next will likely be smaller.
-          i1 += 1;
-          i2 += 1;
+          i1 = i1orig + noff;
+          i2 = i2orig + noff;
           next1 = 1;
           next2 = 1;
         }
 
         // Ensure there is another event from which to compute delta
-        if (i1+next1 >= nevents || i2+next2 >= nevents) break;
+        if (i1+next1 >= nevents || i2+next2 >= nevents)
+          break;
 
         // Update the difference with the new offset
         const double delta1 = times1[i1+next1] - times1[i1];
         const double delta2 = times2[i2+next2] - times2[i2];
         diff = std::fabs(delta2 - delta1 * ratio);
 
+        // Move onto the next offset trial
         ioff += 1;
+
+        //std::cout << ".. " << i1+next1 << ", " << i2+next2 << " : " << diff << std::endl;
       }
     }
 
-    // Otherwise simply push the indices into the buffer
+    // Differenc is within threshold simply push the indices into the buffer of
+    // events which can be written out
     else {
       buffIndex1[ibuff] = i1;
       buffIndex2[ibuff] = i2;
     }
 
-    // If the buffer is fully synchronized, then the events at the back are
-    // good for writing
-
+    // If all events in the buffer were within threshold, then the last ones
+    // can be written to the file
     if (npass == nbuffer) {
       write1[buffIndex1[(ibuff+1) % nbuffer]] = true;
       write2[buffIndex2[(ibuff+1) % nbuffer]] = true;
     }
 
-    // Move to the next buffer spot, and the next set of timestamps
+    // Move to the next buffer spot, and the next indices while maintaining
+    // synchronization
     ibuff = (ibuff+1) % nbuffer;
     i1 += next1;
     i2 += next2;
