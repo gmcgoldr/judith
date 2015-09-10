@@ -21,6 +21,7 @@ Looper::Looper(const std::vector<Storage::StorageI*>& inputs) :
     m_minEvents(-1),  // largest unsigned integer
     m_finalized(false),
     m_ievent(0),
+    m_lastTime(0),
     m_start(0),
     m_nprocess(-1),  // causes iteration over entire range
     m_nstep(1),
@@ -109,7 +110,10 @@ void Looper::printProgress() {
   const ULong64_t nelapsed = m_ievent - m_start;
   const double telapsed = m_timer.RealTime();
   m_timer.Continue();
-  const double bandwidth = telapsed*1E6 / (double)nelapsed;
+  const double tinst = telapsed - m_lastTime;
+  m_lastTime = telapsed;
+
+  const double bandwidth = (tinst)*1E6 / (double)m_printInterval;
   const double progress = nelapsed / (double)m_nprocess;
   
   std::printf("\r[");  // \r overwrite the last line
@@ -119,7 +123,7 @@ void Looper::printProgress() {
     std::printf((progress*50>i) ? "=" : " ");
   std::printf("] ");
   // Print also the % done, and the bandwidth
-  std::printf("%3d%%, %6.1f us", (int)(progress*100), bandwidth);
+  std::printf("%3d%%, %5.1f us  ", (int)(progress*100), bandwidth);
   // Show on the output (don't buffer)
   std::cout << std::flush;
 }
@@ -144,7 +148,8 @@ void Looper::loop() {
   
   for (m_ievent = m_start; m_ievent < m_start+m_nprocess; m_ievent += m_nstep) {
     // If a print interval is given, and this event is on it, print progress
-    if (m_printInterval && (m_ievent%m_printInterval == 0)) printProgress();
+    if (m_printInterval && ((m_ievent-m_start) % m_printInterval == 0))
+      printProgress();
     bool invalid = false;
     // Read this event from each input file
     for (size_t i = 0; i < m_inputs.size(); i++) {

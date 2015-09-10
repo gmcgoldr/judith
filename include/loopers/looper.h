@@ -52,6 +52,8 @@ protected:
   ULong64_t m_ievent;
   /** Timer keeps track of time between progress bar calls */
   TStopwatch m_timer;
+  /** Keep track of last updated time for instantaneous bandwidth */
+  double m_lastTime;
 
   /** List of processors to execute at each loop. Not owned by this. */
   std::vector<Processors::Processor*> m_processors;
