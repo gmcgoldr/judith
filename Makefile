@@ -24,6 +24,9 @@ build/options.o: src/options.cxx include/options.h
 build/utils.o: src/utils.cxx include/utils.h
 	$(CC) $(CFLAGS) $(INC) -c src/utils.cxx -o build/utils.o
 
+build/rootstyle.o: src/rootstyle.cxx include/rootstyle.h
+	$(CC) $(CFLAGS) $(INC) -c src/rootstyle.cxx -o build/rootstyle.o
+
 ### Storage library ###
 
 lib/libjudstorage.a: build/hit.o build/cluster.o build/plane.o build/track.o build/event.o build/storageio.o build/storagei.o build/storageo.o
@@ -89,8 +92,8 @@ build/proctracking.o: src/processors/tracking.cxx include/processors/tracking.h
 	
 ### Analyzers library ###
 
-lib/libjudana.a: build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o build/anasynchronization.o
-	ar ru lib/libjudana.a build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o build/anasynchronization.o
+lib/libjudana.a: build/rootstyle.o build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o build/anasynchronization.o
+	ar ru lib/libjudana.a build/rootstyle.o build/utils.o build/analyzer.o build/anacorrelations.o build/anaclusterresiduals.o build/anatrackresiduals.o build/anatrackchi2.o build/anasynchronization.o
 
 build/analyzer.o: src/analyzers/analyzer.cxx include/analyzers/analyzer.h
 	$(CC) $(CFLAGS) $(INC) -c src/analyzers/analyzer.cxx -o build/analyzer.o
